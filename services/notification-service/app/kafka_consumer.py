@@ -54,18 +54,18 @@ async def process_event(topic: str, event: dict):
             notification_type="like",
             actor_id=user_id,
             post_id=post_id,
-            message=f"Someone liked your post",
+            message="Someone liked your post",
         )
         await broadcast_to_user(user_id, notification)
 
     elif event_type == "post.commented":
-        comment_id = event.get("commentId", "")
+
         notification = await notification_service.create_notification(
             user_id=user_id,
             notification_type="comment",
             actor_id=user_id,
             post_id=post_id,
-            message=f"Someone commented on your post",
+            message="Someone commented on your post",
         )
         await broadcast_to_user(user_id, notification)
 
@@ -75,7 +75,7 @@ async def process_event(topic: str, event: dict):
             user_id=target_user_id,
             notification_type="follow",
             actor_id=user_id,
-            message=f"Someone started following you",
+            message="Someone started following you",
         )
         await broadcast_to_user(target_user_id, notification)
 
