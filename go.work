@@ -1,0 +1,10 @@
+go 1.22.0
+
+use (
+	./pkg
+	./services/user-service
+	./services/auth-service
+	./services/post-service
+	./services/comment-service
+	./services/feed-service
+)

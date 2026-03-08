@@ -1,0 +1,64 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: linksphere-ingress
+  namespace: linksphere
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/websocket-services: notification-service
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api.linksphere.local
+      http:
+        paths:
+          - path: /api/v1/users
+            pathType: Prefix
+            backend:
+              service:
+                name: user-service
+                port:
+                  number: 8001
+          - path: /api/v1/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: auth-service
+                port:
+                  number: 8002
+          - path: /api/v1/posts
+            pathType: Prefix
+            backend:
+              service:
+                name: post-service
+                port:
+                  number: 8003
+          - path: /api/v1/feed
+            pathType: Prefix
+            backend:
+              service:
+                name: feed-service
+                port:
+                  number: 8005
+          - path: /api/v1/notifications
+            pathType: Prefix
+            backend:
+              service:
+                name: notification-service
+                port:
+                  number: 8006
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: notification-service
+                port:
+                  number: 8006
+          - path: /api/v1/search
+            pathType: Prefix
+            backend:
+              service:
+                name: search-service
+                port:
+                  number: 8007
