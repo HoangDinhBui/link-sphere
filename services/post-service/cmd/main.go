@@ -32,8 +32,8 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.JWTAuth(cfg.JWTSecret))
 		r.Post("/api/v1/posts", postHandler.Create)
-		r.Get("/api/v1/posts", postHandler.List)
-		r.Get("/api/v1/posts/{id}", postHandler.GetByID)
+		r.Post("/api/v1/posts/list", postHandler.List)
+		r.Post("/api/v1/posts/detail", postHandler.GetByID)
 		r.Post("/api/v1/posts/{id}/like", postHandler.Like)
 	})
 

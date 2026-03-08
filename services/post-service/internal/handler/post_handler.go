@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/linksphere/pkg/middleware"
@@ -40,18 +39,32 @@ func (h *PostHandler) Create(w http.ResponseWriter, r *http.Request) {
 	response.Success(w, "post created successfully", post)
 }
 
+// ListRequest represents the list posts request body.
+type ListRequest struct {
+	Page  int `json:"page"`
+	Limit int `json:"limit"`
+}
+
+// DetailRequest represents the get post detail request body.
+type DetailRequest struct {
+	PostID string `json:"postId"`
+}
+
 // List returns a paginated list of posts.
 func (h *PostHandler) List(w http.ResponseWriter, r *http.Request) {
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	if page < 1 {
-		page = 1
+	var req ListRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.Error(w, http.StatusBadRequest, "invalid request body")
+		return
 	}
-	if limit < 1 || limit > 50 {
-		limit = 20
+	if req.Page < 1 {
+		req.Page = 1
+	}
+	if req.Limit < 1 || req.Limit > 50 {
+		req.Limit = 20
 	}
 
-	posts, err := h.svc.List(r.Context(), page, limit)
+	posts, err := h.svc.List(r.Context(), req.Page, req.Limit)
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, err.Error())
 		return
@@ -62,8 +75,12 @@ func (h *PostHandler) List(w http.ResponseWriter, r *http.Request) {
 
 // GetByID returns a single post by ID.
 func (h *PostHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	post, err := h.svc.GetByID(r.Context(), id)
+	var req DetailRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.Error(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	post, err := h.svc.GetByID(r.Context(), req.PostID)
 	if err != nil {
 		response.Error(w, http.StatusNotFound, "post not found")
 		return
