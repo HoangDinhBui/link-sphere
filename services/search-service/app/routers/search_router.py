@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import Optional, List
-from loguru import logger
+from typing import Optional
 
 from app.services.search_service import SearchService
 
