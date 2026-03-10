@@ -2,57 +2,38 @@ from datetime import datetime
 from typing import List, Optional
 
 from loguru import logger
+from app.repositories.notification_repository import NotificationRepository
 
 
 class NotificationService:
-    """Business logic for notification operations."""
-
     def __init__(self):
-        # In-memory store for scaffold (replace with DB in production)
-        self._notifications: List[dict] = []
+        self.repo: Optional[NotificationRepository] = None
 
-    async def create_notification(
-        self,
-        user_id: str,
-        notification_type: str,
-        actor_id: str,
-        post_id: Optional[str] = None,
-        message: str = "",
-    ) -> dict:
-        """Create and store a new notification."""
-        notification = {
-            "id": str(len(self._notifications) + 1),
-            "user_id": user_id,
-            "type": notification_type,
-            "actor_id": actor_id,
-            "post_id": post_id,
-            "message": message,
-            "is_read": False,
-            "created_at": datetime.utcnow().isoformat(),
-        }
-        self._notifications.append(notification)
+    async def create_notification(self, user_id: str, notification_type: str, actor_id: str, post_id: Optional[str] = None, message: str = "") -> dict:
+        if not self.repo:
+            logger.error("NotificationRepository not initialized")
+            return {}
+        notification = await self.repo.create(
+            user_id=user_id,
+            actor_id=actor_id,
+            type=notification_type,
+            message=message,
+            post_id=post_id
+        )
         logger.info(f"Notification created: {notification_type} for user {user_id}")
         return notification
 
-    async def get_notifications(
-        self, user_id: str, page: int = 1, limit: int = 20
-    ) -> List[dict]:
-        """Get paginated notifications for a user."""
-        user_notifications = [
-            n for n in self._notifications if n["user_id"] == user_id
-        ]
-        # Sort by created_at descending
-        user_notifications.sort(key=lambda x: x["created_at"], reverse=True)
-
-        # Paginate
-        start = (page - 1) * limit
-        end = start + limit
-        return user_notifications[start:end]
+    async def get_notifications(self, user_id: str, page: int = 1, limit: int = 20) -> List[dict]:
+        if not self.repo:
+            return []
+        
+        return await self.repo.get_by_user(user_id=user_id, page=page, limit=limit)
 
     async def mark_as_read(self, notification_id: str) -> bool:
-        """Mark a notification as read."""
-        for n in self._notifications:
-            if n["id"] == notification_id:
-                n["is_read"] = True
-                return True
-        return False
+        if not self.repo:
+            return False
+            
+        result = await self.repo.mark_as_read(notification_id=notification_id)
+        if result:
+            logger.info(f"Marked notification {notification_id} as read")
+        return result

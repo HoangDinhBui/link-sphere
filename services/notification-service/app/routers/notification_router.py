@@ -12,19 +12,35 @@ notification_service = NotificationService()
 # Store active WebSocket connections: user_id -> set of WebSocket connections
 active_connections: Dict[str, Set[WebSocket]] = {}
 
+def get_current_user(authorization: Optional[str] = Header(None)) -> str:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid token")
+    
+    token = authorization.split(" ")[1]
+    secret = os.getenv("JWT_SECRET", "super-secret-jwt-key")
+    
+    try:
+        payload = jwt.decode(token, secret, algorithms=["HS256"])
+        user_id = payload.get("user_id") or payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+        return user_id
+    except JWTError as e:
+        logger.error(f"JWT decode error: {e}")
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
 
-@router.post("/list")
-async def list_notifications(request: NotificationListRequest):
+
+@router.post("/list", response_model=NotificationResponse)
+async def list_notifications(
+    request: NotificationListRequest,
+    user_id: str = Depends(get_current_user) # Bơm JWT middleware vào đây
+):
     """List notifications for the authenticated user."""
-    # TODO: Extract user_id from JWT token
-    user_id = "placeholder"
-
     notifications = await notification_service.get_notifications(
-        user_id=user_id,
+        user_id=user_id, # Đã có user real từ token
         page=request.page,
         limit=request.limit,
     )
-
     return {
         "code_status": 200,
         "message": "notifications retrieved successfully",

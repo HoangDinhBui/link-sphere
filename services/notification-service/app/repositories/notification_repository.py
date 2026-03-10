@@ -1,33 +1,45 @@
-
-
+from typing import List, Optional
+import asyncpg
+from loguru import logger
 
 class NotificationRepository:
-    """Database operations for notifications.
+    def __init__(self, db_pool: asyncpg.Pool):
+        self.pool = db_pool
+
+    async def create(self, user_id: str, actor_id: str, type: str, message: str, post_id: Optional[str] = None) -> dict:
+        query = """ 
+        INSERT INTO notifications (user_id, actor_id, type, message, post_id)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, user_id, actor_id, type, post_id, message, is_read, created_at
+        """
+
+        async with self.pool.acquire() as conn:
+            record = await conn.fetchrow(query, user_id, actor_id, type, message, post_id)
+            return dict(record) if record else {}
+
     
-    Currently uses in-memory storage. Replace with asyncpg/SQLAlchemy
-    for production use.
-    """
+    async def get_by_user(self, user_id: str, page: int = 1, limit: int = 20) -> List[dict]:
+        offset = (page - 1) * limit
+        query = """ 
+        SELECT id, user_id, actor_id, type, post_id, message, is_read, created_at
+        FROM notifications
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+        LIMIT $2 OFFSET $3
+        """
 
-    def __init__(self):
-        self._store: list = []
+        async with self.pool.acquire() as conn:
+            records = await conn.fetch(query, user_id, limit, offset)
+            return [dict(r) for r in records]
 
-    async def create(self, notification: dict) -> dict:
-        """Insert a notification record."""
-        self._store.append(notification)
-        return notification
+        
+    async def mark_as_read(self, notification_id: str) -> bool:
+        query = "UPDATE notifications SET is_read = TRUE WHERE id = $1"
 
-    async def get_by_user_id(
-        self, user_id: str, limit: int = 20, offset: int = 0
-    ) -> list:
-        """Get notifications for a user with pagination."""
-        user_notifs = [n for n in self._store if n["user_id"] == user_id]
-        user_notifs.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-        return user_notifs[offset : offset + limit]
+        async with self.pool.acquire() as conn:
+            result = await conn.execute(query, notification_id)
+            return result == "UPDATE 1"
 
-    async def mark_read(self, notification_id: str) -> bool:
-        """Mark a notification as read."""
-        for n in self._store:
-            if n.get("id") == notification_id:
-                n["is_read"] = True
-                return True
-        return False
+    
+
+
