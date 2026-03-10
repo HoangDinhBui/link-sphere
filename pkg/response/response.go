@@ -7,10 +7,11 @@ import (
 
 // Response is the standard API response format.
 type Response struct {
-	Success bool        `json:"success"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   string      `json:"error,omitempty"`
-	Message string      `json:"message,omitempty"`
+	CodeStatus int         `json:"code_status"`
+	Message    string      `json:"message"`
+	Result     bool        `json:"result"`
+	Errors     interface{} `json:"errors"`
+	Data       interface{} `json:"data"`
 }
 
 // JSON sends a JSON response with the given status code.
@@ -18,8 +19,11 @@ func JSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(Response{
-		Success: status >= 200 && status < 300,
-		Data:    data,
+		CodeStatus: status,
+		Message:    http.StatusText(status),
+		Result:     status >= 200 && status < 300,
+		Errors:     map[string]interface{}{},
+		Data:       data,
 	})
 }
 
@@ -28,9 +32,11 @@ func Error(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(Response{
-		Success: false,
-		Error:   http.StatusText(status),
-		Message: message,
+		CodeStatus: status,
+		Message:    message,
+		Result:     false,
+		Errors:     map[string]string{"error": message},
+		Data:       nil,
 	})
 }
 
@@ -39,8 +45,10 @@ func Success(w http.ResponseWriter, message string, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(Response{
-		Success: true,
-		Data:    data,
-		Message: message,
+		CodeStatus: http.StatusOK,
+		Message:    message,
+		Result:     true,
+		Errors:     map[string]interface{}{},
+		Data:       data,
 	})
 }

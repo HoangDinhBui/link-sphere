@@ -29,7 +29,9 @@ async def search_posts(request: SearchRequest):
     )
 
     return {
-        "success": True,
-        "data": results,
+        "code_status": 200,
         "message": f"Found {len(results)} results",
+        "result": True,
+        "errors": {},
+        "data": results,
     }

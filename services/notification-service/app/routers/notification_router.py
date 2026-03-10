@@ -26,9 +26,11 @@ async def list_notifications(request: NotificationListRequest):
     )
 
     return {
-        "success": True,
-        "data": notifications,
+        "code_status": 200,
         "message": "notifications retrieved successfully",
+        "result": True,
+        "errors": {},
+        "data": notifications,
     }
 
 

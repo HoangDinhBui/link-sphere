@@ -26,8 +26,8 @@ class NotificationListRequest(BaseModel):
 
 class NotificationResponse(BaseModel):
     """Standard API response."""
-
-    success: bool
+    code_status: int = 200
+    message: str = "Success."
+    result: bool = True
+    errors: dict = {}
     data: Optional[list] = None
-    message: Optional[str] = None
-    error: Optional[str] = None
