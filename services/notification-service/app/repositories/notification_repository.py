@@ -1,6 +1,5 @@
 from typing import List, Optional
 import asyncpg
-from loguru import logger
 
 class NotificationRepository:
     def __init__(self, db_pool: asyncpg.Pool):

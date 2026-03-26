@@ -76,7 +76,7 @@ async def process_event(topic: str, event: dict):
         notification = await notification_service.create_notification(
             user_id=target_user_id,
             notification_type="follow",
-            actor_id=user_id,
+            actor_id=actor_id,
             message="Someone started following you",
         )
         await broadcast_to_user(target_user_id, notification)
