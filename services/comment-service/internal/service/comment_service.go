@@ -53,6 +53,7 @@ func (s *CommentService) Create(ctx context.Context, userID string, req *model.C
 		"event":     "post.commented",
 		"userId":    userID,
 		"postId":    req.PostID,
+		"ownerId":   "", // TODO: Fetch post owner from post-service
 		"commentId": comment.ID,
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}

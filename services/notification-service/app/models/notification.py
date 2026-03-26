@@ -24,6 +24,12 @@ class NotificationListRequest(BaseModel):
     limit: int = 20
 
 
+class MarkAsReadRequest(BaseModel):
+    """Request body for marking a notification as read."""
+
+    notification_id: str
+
+
 class NotificationResponse(BaseModel):
     """Standard API response."""
     code_status: int = 200

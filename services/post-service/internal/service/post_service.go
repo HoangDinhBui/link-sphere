@@ -50,7 +50,7 @@ func (s *PostService) Create(ctx context.Context, userID string, req *model.Crea
 	}
 
 	// Publish post created event to Kafka
-	s.publishEvent(ctx, "post.created", userID, post.ID)
+	s.publishEvent(ctx, "post.created", userID, post.ID, userID)
 
 	return post, nil
 }
@@ -72,17 +72,25 @@ func (s *PostService) Like(ctx context.Context, postID, userID string) error {
 		return err
 	}
 
+	// Fetch post to get ownerID for notification
+	post, err := s.repo.GetByID(ctx, postID)
+	ownerID := ""
+	if err == nil && post != nil {
+		ownerID = post.UserID
+	}
+
 	// Publish like event to Kafka
-	s.publishEvent(ctx, "post.liked", userID, postID)
+	s.publishEvent(ctx, "post.liked", userID, postID, ownerID)
 
 	return nil
 }
 
-func (s *PostService) publishEvent(ctx context.Context, event, userID, postID string) {
+func (s *PostService) publishEvent(ctx context.Context, event, userID, postID, ownerID string) {
 	evt := model.KafkaEvent{
 		Event:     event,
 		UserID:    userID,
 		PostID:    postID,
+		OwnerID:   ownerID,
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 

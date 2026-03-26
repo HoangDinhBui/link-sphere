@@ -34,5 +34,6 @@ type KafkaEvent struct {
 	Event     string `json:"event"`
 	UserID    string `json:"userId"`
 	PostID    string `json:"postId"`
+	OwnerID   string `json:"ownerId,omitempty"`
 	Timestamp string `json:"timestamp"`
 }

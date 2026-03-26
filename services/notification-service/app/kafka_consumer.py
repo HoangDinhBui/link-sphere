@@ -42,32 +42,34 @@ async def start_kafka_consumer():
 async def process_event(topic: str, event: dict):
     """Process a Kafka event and create appropriate notification."""
     event_type = event.get("event", "")
-    user_id = event.get("userId", "")
+    actor_id = event.get("userId", "")
     post_id = event.get("postId", "")
+    owner_id = event.get("ownerId", "")
+    
+    # recipient_id is who receives the notification
+    recipient_id = owner_id if owner_id else actor_id
 
-    logger.info(f"Processing event: {event_type} from topic: {topic}")
+    logger.info(f"Processing event: {event_type} (actor: {actor_id}, recipient: {recipient_id})")
 
     if event_type == "post.liked":
-        # Notify the post owner that someone liked their post
         notification = await notification_service.create_notification(
-            user_id=user_id,  # Should be post owner, simplified here
+            user_id=recipient_id,
             notification_type="like",
-            actor_id=user_id,
+            actor_id=actor_id,
             post_id=post_id,
-            message="Someone liked your post",
+            message=f"User {actor_id} liked your post",
         )
-        await broadcast_to_user(user_id, notification)
+        await broadcast_to_user(recipient_id, notification)
 
     elif event_type == "post.commented":
-
         notification = await notification_service.create_notification(
-            user_id=user_id,
+            user_id=recipient_id,
             notification_type="comment",
-            actor_id=user_id,
+            actor_id=actor_id,
             post_id=post_id,
-            message="Someone commented on your post",
+            message=f"User {actor_id} commented on your post",
         )
-        await broadcast_to_user(user_id, notification)
+        await broadcast_to_user(recipient_id, notification)
 
     elif event_type == "user.followed":
         target_user_id = event.get("targetUserId", "")

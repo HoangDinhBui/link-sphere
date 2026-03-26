@@ -1,9 +1,11 @@
-from typing import Dict, Set
+import os
+from typing import Dict, Set, Optional
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, Header
+from jose import jwt, JWTError
 from loguru import logger
 
-from app.models.notification import NotificationListRequest
+from app.models.notification import NotificationListRequest, NotificationResponse, MarkAsReadRequest
 from app.services.notification_service import NotificationService
 
 router = APIRouter()
@@ -33,11 +35,11 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> str:
 @router.post("/list", response_model=NotificationResponse)
 async def list_notifications(
     request: NotificationListRequest,
-    user_id: str = Depends(get_current_user) # Bơm JWT middleware vào đây
+    user_id: str = Depends(get_current_user) # Inject JWT middleware into this function
 ):
     """List notifications for the authenticated user."""
     notifications = await notification_service.get_notifications(
-        user_id=user_id, # Đã có user real từ token
+        user_id=user_id,
         page=request.page,
         limit=request.limit,
     )
@@ -47,6 +49,26 @@ async def list_notifications(
         "result": True,
         "errors": {},
         "data": notifications,
+    }
+
+
+@router.post("/read", response_model=NotificationResponse)
+async def mark_as_read(
+    request: MarkAsReadRequest,
+    user_id: str = Depends(get_current_user)
+):
+    """Mark a notification as read for the authenticated user."""
+    success = await notification_service.mark_as_read(request.notification_id)
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="Notification not found")
+
+    return {
+        "code_status": 200,
+        "message": "notification marked as read",
+        "result": True,
+        "errors": {},
+        "data": None,
     }
 
 
@@ -76,7 +98,7 @@ async def websocket_endpoint(websocket: WebSocket):
             del active_connections[user_id]
         logger.info(f"WebSocket disconnected: user_id={user_id}")
 
-
+# If user open 5 tabs at the same time, all of them will display the notification
 async def broadcast_to_user(user_id: str, message: dict):
     """Send a notification to all active WebSocket connections of a user."""
     if user_id in active_connections:

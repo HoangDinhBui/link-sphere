@@ -12,7 +12,7 @@ class NotificationRepository:
         VALUES ($1, $2, $3, $4, $5)
         RETURNING id, user_id, actor_id, type, post_id, message, is_read, created_at
         """
-
+        # Returning will help us get the notification id and send it to the user, no need to query again
         async with self.pool.acquire() as conn:
             record = await conn.fetchrow(query, user_id, actor_id, type, message, post_id)
             return dict(record) if record else {}
