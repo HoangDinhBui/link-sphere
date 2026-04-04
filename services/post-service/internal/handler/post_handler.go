@@ -100,3 +100,34 @@ func (h *PostHandler) Like(w http.ResponseWriter, r *http.Request) {
 
 	response.Success(w, "post liked successfully", nil)
 }
+
+// GetByUserIDsRequest represents the request body to retrieve posts by user IDs.
+type GetByUserIDsRequest struct {
+	UserIDs []string `json:"userIds"`
+	Page    int      `json:"page"`
+	Limit   int      `json:"limit"`
+}
+
+// GetByUserIDs returns posts for multiple user IDs.
+func (h *PostHandler) GetByUserIDs(w http.ResponseWriter, r *http.Request) {
+	var req GetByUserIDsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.Error(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.Page < 1 {
+		req.Page = 1
+	}
+	if req.Limit < 1 {
+		req.Limit = 10
+	}
+
+	posts, err := h.svc.GetByUserIDs(r.Context(), req.UserIDs, req.Page, req.Limit)
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.JSON(w, http.StatusOK, posts)
+}

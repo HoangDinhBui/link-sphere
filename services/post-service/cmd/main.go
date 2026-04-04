@@ -35,6 +35,7 @@ func main() {
 		r.Post("/api/v1/posts/list", postHandler.List)
 		r.Post("/api/v1/posts/detail", postHandler.GetByID)
 		r.Post("/api/v1/posts/{id}/like", postHandler.Like)
+		r.Post("/api/v1/posts/by-users", postHandler.GetByUserIDs)
 	})
 
 	port := cfg.ServerPort

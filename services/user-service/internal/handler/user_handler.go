@@ -93,3 +93,14 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	}
 	response.JSON(w, http.StatusOK, user)
 }
+
+// GetFollowing returns the list of IDs that the user follows.
+func (h *UserHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	following, err := h.svc.GetFollowing(r.Context(), id)
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.JSON(w, http.StatusOK, following)
+}

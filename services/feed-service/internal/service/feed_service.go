@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -73,14 +74,51 @@ func (s *FeedService) GetFeed(ctx context.Context, userID string, page, limit in
 
 // fetchFeedFromServices calls other microservices to build the feed.
 func (s *FeedService) fetchFeedFromServices(ctx context.Context, userID string, page, limit int) ([]FeedItem, error) {
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+
 	// Step 1: Get following list from user-service
 	userServiceURL := fmt.Sprintf("http://user-service:8001/api/v1/users/%s/following", userID)
-	_ = userServiceURL // Will be used when inter-service calls are fully implemented
+	req1, err := http.NewRequestWithContext(ctx, http.MethodGet, userServiceURL, nil)
+	if err != nil {
+		return []FeedItem{}, nil
+	}
+
+	resp, err := client.Do(req1)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to fetch following list from user-service")
+		return []FeedItem{}, nil
+	}
+	defer resp.Body.Close()
+
+	var followingIDs []string
+	if err := json.NewDecoder(resp.Body).Decode(&followingIDs); err != nil {
+		log.Warn().Err(err).Msg("failed to decode following list")
+		return []FeedItem{}, nil
+	}
+
+	// If the user isn't following anyone, return empty feed (or global feed)
+	if len(followingIDs) == 0 {
+		return []FeedItem{}, nil
+	}
 
 	// Step 2: Get posts from post-service for those users
-	postServiceURL := fmt.Sprintf("http://post-service:8003/api/v1/posts?page=%d&limit=%d", page, limit)
+	postServiceURL := "http://post-service:8003/api/v1/posts/by-users"
+	postReq := map[string]interface{}{
+		"userIds": followingIDs,
+		"page":    page,
+		"limit":   limit,
+	}
+	postData, _ := json.Marshal(postReq)
 
-	resp, err := http.Get(postServiceURL)
+	req2, err := http.NewRequestWithContext(ctx, http.MethodPost, postServiceURL, bytes.NewBuffer(postData))
+	if err != nil {
+		return []FeedItem{}, nil
+	}
+	req2.Header.Set("Content-Type", "application/json")
+
+	resp, err = client.Do(req2)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to fetch posts from post-service")
 		return []FeedItem{}, nil
@@ -92,12 +130,11 @@ func (s *FeedService) fetchFeedFromServices(ctx context.Context, userID string, 
 		return []FeedItem{}, nil
 	}
 
-	var result struct {
-		Data []FeedItem `json:"data"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
+	var feed []FeedItem
+	if err := json.Unmarshal(body, &feed); err != nil {
+		log.Warn().Err(err).Msg("failed to unmarshal feed items")
 		return []FeedItem{}, nil
 	}
 
-	return result.Data, nil
+	return feed, nil
 }

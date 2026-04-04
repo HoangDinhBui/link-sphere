@@ -66,6 +66,12 @@ func (s *PostService) List(ctx context.Context, page, limit int) ([]model.Post, 
 	return s.repo.List(ctx, limit, offset)
 }
 
+// GetByUserIDs returns posts by multiple user IDs.
+func (s *PostService) GetByUserIDs(ctx context.Context, userIDs []string, page, limit int) ([]model.Post, error) {
+	offset := (page - 1) * limit
+	return s.repo.GetByUserIDs(ctx, userIDs, limit, offset)
+}
+
 // Like adds a like to a post and publishes a Kafka event.
 func (s *PostService) Like(ctx context.Context, postID, userID string) error {
 	if err := s.repo.Like(ctx, postID, userID); err != nil {

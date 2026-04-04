@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -49,6 +53,7 @@ func main() {
 		r.Post("/api/v1/users/unfollow", userHandler.Unfollow)
 		r.Get("/api/v1/users/profile", userHandler.GetProfile)
 		r.Get("/api/v1/users/{id}", userHandler.GetUserByID)
+		r.Get("/api/v1/users/{id}/following", userHandler.GetFollowing)
 	})
 
 	port := cfg.ServerPort
@@ -56,8 +61,28 @@ func main() {
 		port = "8001"
 	}
 
-	log.Info().Str("port", port).Msg("User Service starting")
-	if err := http.ListenAndServe(":"+port, r); err != nil {
-		log.Fatal().Err(err).Msg("server failed")
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: r,
 	}
+
+	go func() {
+		log.Info().Str("port", port).Msg("User Service starting")
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal().Err(err).Msg("server failed")
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+	log.Info().Msg("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal().Err(err).Msg("Server forced to shutdown")
+	}
+	log.Info().Msg("Server exiting")
 }
