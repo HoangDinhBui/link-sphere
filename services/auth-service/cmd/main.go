@@ -27,6 +27,12 @@ func main() {
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 
+	// Health check
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
 	r.Post("/api/v1/auth/login", authHandler.Login)
 	r.Post("/api/v1/auth/refresh", authHandler.RefreshToken)
 
